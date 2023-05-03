@@ -24,7 +24,7 @@ scatter(naca2412.XY(1,:), naca2412.XY(2,:), 5); % vertecies
 legend('MCL', 'Body', 'Points');
 
 %% iterate accross AoAs
-alphas = linspace(-2, 12, 200); %deg
+alphas = linspace(-2, 12, 10); %deg
 output = cell(size(alphas));
 newfig = 1;
 for i = 1:length(alphas)
@@ -226,29 +226,6 @@ for i = 1:num_points-1
     end
 end
 
-
-% 
-% RHS = zeros(num_panels, 1);
-% An = zeros(num_points);
-% At = zeros(num_panels, num_points);
-% for i = 1:num_points-1
-%     An(i,1) = Cn1(i,1);
-%     An(i,num_points) = Cn2(1,num_points-1);
-%     At(i,1) = Ct1(i,1);
-%     At(i,num_points) = Ct2(i,num_points-1);
-%     RHS(i) = sin(theta(i) - alpha);
-%     for j = 2:num_points-1
-%         An(i,j) = Cn1(i,j) + Cn2(i,j-1);
-%         At(i,j) = Ct1(i,j) + Ct2(i,j-1);
-%     end
-% end
-% An(num_points,1) = 1;
-% An(num_points,num_points) = 1;
-% for j = 2:num_points-1
-%     An(num_points,j) = 0;
-% end
-% RHS(num_points) = 0;
-
 %% determine Cp
 Gamma = An\RHS;
 
@@ -275,22 +252,8 @@ end
 
 Cp_l = flip(Cp(1:num_panels/2));
 X_l = flip(X_mid(1:num_panels/2));
-Y_l = flip(Y_mid(1:num_panels/2));
 Cp_u = Cp(num_panels/2+1:end);
 X_u = X_mid(num_panels/2+1:end);
-Y_u = Y_mid(num_panels/2+1:end);
-
-% Compute lift and drag coefficient using trapizoidal integration
-
-% % xcp
-% int_x_cp = 0;
-% int_cp = 0;
-% for i = 1:length(Cp_l)
-%    dx = naca4.x(i) - naca4.x(i+1);
-%    int_x_cp = int_x_cp + (X_mid(i) * (Cp_l(i) - Cp_u(i)))*dx;
-%    int_cp = int_cp + (Cp_l(i) - Cp_u(i))*dx;
-% end
-% xcp = 1 - int_x_cp / int_cp;
 
 % normal coeff
 cn = 0;
@@ -308,20 +271,14 @@ for i = 1:length(Cp_l)
     ca = ca + (Cp_u(i)*dy_u/dx - Cp_u(i)*dy_l/dx)*dx;
 end
 
-% calculate cd and cl
+% calculate cl and cd
 ClCd = [cos(alpha) -sin(alpha) ; sin(alpha) cos(alpha)] * [cn ; ca];
 cl = ClCd(1);
 cd = ClCd(2);
 
-% coeff moment LE
+% coeff moment about LE
 cmle = 0;
 for i = 1:length(Cp_l)-1
-    xil = X_mid(i);
-    xi1l = X_mid(i+1);
-    dxl = xil - xi1l;
-    xiu = X_mid(num_panels - i);
-    xi1u = X_mid(num_panels - i+1);
-    dxu = xiu - xi1u;
     
     xil = Xbody(i);
     xi1l = Xbody(i+1);
@@ -329,24 +286,14 @@ for i = 1:length(Cp_l)-1
     xiu = Xbody(num_points - i+1);
     xi1u = Xbody(num_points - i);
     dxu = xiu - xi1u;
-    
-    dy_l = Ybody(i) - Ybody(i+1);
-    dy_u = Ybody(num_panels-i+1) - Ybody(num_panels-i);
-    y_u = Y_mid(num_panels-i);
-    y_l = Y_mid(i);
+  
     cmle = cmle + ...
         ((Cp_u(i) + Cp_u(i+1))/2)*((xiu+xi1u)/2)*dxu - ...
         ((Cp_l(i) + Cp_l(i+1))/2)*((xil+xi1l)/2)*dxl;
 end
 
 % xcp
-
-% Fy = sum([Cp_l .* transpose(X_l), Cp_u .* transpose(X_u)]);
-% M_le = -sum([Cp_l .* transpose(X_l) .* transpose(Y_l) ...
-%     , Cp_u .* transpose(X_u) .* transpose(Y_u)]);
-% xcp = M_le/Fy;
-
-xcp = -cmle / cl; % revise this
+xcp = -cmle / cl;
 
 % cmc/4
 cmc4 = -cl*(xcp-0.25);
@@ -378,7 +325,7 @@ end
 
 end
 
-%% User Defined Functions =================================================
+%% NACA 4-DIGIT ===========================================================
 
 % naca4(mpxx) returns a characterized airfoild using A&V mean cord line
 % equations. This function will parse 4 digit numbers and return a struct
