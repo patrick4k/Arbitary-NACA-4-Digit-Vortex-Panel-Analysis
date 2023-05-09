@@ -8,7 +8,7 @@ m = 120;
 
 %% Model NACA 2412 body
 figure(1);
-title('NACA 2412');
+title(sprintf('NACA 2412 (%d panels)',m));
 xlabel('x/c');
 ylabel('y/c');
 hold on; grid on; axis equal;
@@ -24,7 +24,7 @@ scatter(naca2412.XY(1,:), naca2412.XY(2,:), 5); % vertecies
 legend('MCL', 'Body', 'Points');
 
 %% iterate accross AoAs
-alphas = linspace(-2, 12, 10); %deg
+alphas = linspace(-4, 12, 10); %deg
 output = cell(size(alphas));
 newfig = 1;
 for i = 1:length(alphas)
@@ -46,6 +46,8 @@ end
 
 %% plot Cl vs a
 
+plot_legend = ["",""];
+
 Cl = zeros(size(output));
 Cmc4 = zeros(size(output));
 for i = 1:length(output)
@@ -60,57 +62,64 @@ end
 
 figure(newfig);
 grid on; hold on;
-title('Cl vs AoA');
+title(sprintf('Flow Characteristics vs AoA (%d panels)', m));
 xlabel('AoA (deg)');
-ylabel('cl');
 plot(alphas, Cl, 'b-');
 coeffs = polyfit(alphas, Cl, 1);
-fplot(@(a) coeffs(1)*a + coeffs(2), [-4 15], 'r--');
+fplot(@(a) coeffs(1)*a + coeffs(2), [-4 15], 'r.');
 
 if coeffs(2) >= 0
-    legend('Cl vs a', sprintf('%.2fa + %.2f',coeffs));
+    plot_legend(end+1) = 'Cl';
+    plot_legend(end+1) = sprintf('%.2fa + %.2f',coeffs);
 else
-    legend('Cl vs a', sprintf('%.2fa %.2f',coeffs));
+    plot_legend(end+1) = 'Cl';
+    plot_legend(end+1) = sprintf('%.2fa %.2f',coeffs);
 end
 
 % get slope
-a0 = coeffs(1);
+ao = coeffs(1);
+a_Cl0 = -coeffs(2) / coeffs(1);
+Cl_a0 = coeffs(2);
+fprintf('a0 = %f\n', ao);
+fprintf('a_Cl0 = %f\n', a_Cl0);
+fprintf('Cl_a0 = %f\n', Cl_a0);
 
 %% plot Cmc/4 vs a
-newfig = newfig + 1;
-
-figure(newfig);
-grid on; hold on;
-title('Cm_c_/_4 vs AoA');
-xlabel('AoA (deg)');
-ylabel('Cm_c_/_4');
-plot(alphas, Cmc4, 'b-');
+plot(alphas, Cmc4, 'g-');
 coeffs = polyfit(alphas, Cmc4, 1);
-fplot(@(a) coeffs(1)*a + coeffs(2), [-4 15], 'r--');
+fplot(@(a) coeffs(1)*a + coeffs(2), [-4 15], '.');
 
 if coeffs(2) >= 0
-    legend('Cl vs a', sprintf('%.2fa + %.2f',coeffs));
+    plot_legend(end+1:end+2) = ["Cm_c_/_4", sprintf('%.2fa + %.2f',coeffs)];
 else
-    legend('Cl vs a', sprintf('%.2fa %.2f',coeffs));
+    plot_legend(end+1:end+2) = ["Cm_c_/_4", sprintf('%.2fa %.2f',coeffs)];
 end
 
 % get slope
 dcmc4_da = coeffs(1);
 
-%% Get aerodynamic center
-xac = 0.25 - dcmc4_da/a0;
+%% get aerodynamic center
+xac = 0.25 - dcmc4_da/ao;
 fprintf('x_ac = %f\n', xac);
+
+%% plot xcp vs AoA
 Xcp = zeros(size(output));
 for i = 1: length(output)
    Xcp(i) = output{i}.xcp;
 end
+
+plot(alphas, Xcp);
+legend([plot_legend(3:end) 'X_c_p']);
+
+%% plot Cmac
 Cmac = -Cl.*(Xcp - xac);
 newfig = newfig + 1;
 figure(newfig);
 grid on; hold on;
 plot(Cl, Cmac);
-title('Cm_a_c vs Cl');
-% ylim([-0.01 0.01]);
+title(sprintf('Cm_a_c vs Cl (%d panels)',m));
+xlabel('Cl');
+ylabel('Cm_a_c');
 coeffs = polyfit(Cl, Cmac, 0);
 cmac = coeffs;
 fprintf('Cmac fit = %f\n', cmac);
